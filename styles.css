@@ -1,0 +1,16 @@
+/* Capture — inherits the .mrd-scope tokens (§7); the sheet root is scoped. */
+.capture-sheet { display: flex; flex-direction: column; gap: var(--mrd-space-3, 12px); }
+.capture-chips { display: flex; flex-wrap: wrap; gap: var(--mrd-space-2, 8px); }
+.capture-chip {
+	min-height: var(--mrd-touch-min, 44px); padding: 0 var(--mrd-space-3, 12px);
+	border: 1px solid var(--background-modifier-border); border-radius: var(--mrd-radius-sm, 3px);
+	background: transparent; color: var(--text-muted); cursor: pointer;
+	font-family: var(--font-monospace); font-size: var(--mrd-fs-xs, 11px);
+	text-transform: uppercase; letter-spacing: 0.08em;
+}
+.capture-chip.is-selected { color: var(--text-on-accent); background: var(--interactive-accent); border-color: var(--interactive-accent); }
+.capture-text { width: 100%; min-height: 5em; border-radius: var(--mrd-radius-sm, 3px); border: 1px solid var(--background-modifier-border); background: var(--background-primary); color: var(--text-normal); padding: var(--mrd-space-2, 8px); }
+.capture-attach { display: flex; gap: var(--mrd-space-2, 8px); }
+.capture-attach-btn { min-height: var(--mrd-touch-min, 44px); padding: 0 var(--mrd-space-3, 12px); border: 1px solid var(--background-modifier-border); border-radius: var(--mrd-radius-sm, 3px); background: transparent; color: var(--text-muted); cursor: pointer; font-family: var(--font-monospace); font-size: var(--mrd-fs-xs, 11px); text-transform: uppercase; letter-spacing: 0.08em; }
+.capture-attach-status { font-family: var(--font-monospace); font-size: var(--mrd-fs-xs, 11px); color: var(--text-muted); min-height: 1em; }
+.capture-submit { min-height: var(--mrd-touch-min, 44px); border: none; border-radius: var(--mrd-radius-sm, 3px); background: var(--interactive-accent); color: var(--text-on-accent); cursor: pointer; font-family: var(--font-monospace); font-size: var(--mrd-fs-sm, 12px); text-transform: uppercase; letter-spacing: 0.08em; }

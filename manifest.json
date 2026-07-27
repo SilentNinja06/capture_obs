@@ -1,0 +1,10 @@
+{
+	"id": "capture",
+	"name": "Capture",
+	"version": "0.1.0",
+	"minAppVersion": "1.4.0",
+	"description": "One-tap quick capture to a schema-correct inbox note, with routing rules, attachment handling, and a Shortcuts/URI entry point.",
+	"author": "Sam Barker",
+	"authorUrl": "https://github.com/SilentNinja06",
+	"isDesktopOnly": false
+}
