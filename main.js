@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => CapturePlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // ../../packages/core/dist/settings/framework.js
 function mergeSettings(defaults, loaded) {
@@ -45,17 +45,47 @@ var import_obsidian = require("obsidian");
 var BottomSheetModal = class extends import_obsidian.Modal {
   constructor(app) {
     super(app);
+    this.vv = null;
+    this.vvHandler = null;
   }
   onOpen() {
     this.modalEl.addClass(cls("sheet"));
     if (import_obsidian.Platform.isMobile) {
       this.modalEl.addClass(cls("sheet", "mobile"));
       this.modalEl.addClass(cls("safe-bottom"));
+      this.trackKeyboard();
     }
     this.contentEl.addClass(cls("sheet", "body"));
     this.renderBody(this.contentEl);
   }
+  /**
+   * Keep a bottom-anchored sheet above the on-screen keyboard. When a field is
+   * focused on mobile, the keyboard shrinks the visual viewport; without this
+   * the sheet sits *behind* the keyboard and is unusable (iOS especially). We
+   * lift the sheet by the keyboard's height so its contents stay visible. The
+   * sheet's own body scrolls (see components.css), so tall content is reachable.
+   */
+  trackKeyboard() {
+    const vv = window.visualViewport;
+    if (!vv)
+      return;
+    this.vv = vv;
+    this.vvHandler = () => {
+      const keyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      this.modalEl.style.bottom = `${keyboard}px`;
+    };
+    vv.addEventListener("resize", this.vvHandler);
+    vv.addEventListener("scroll", this.vvHandler);
+    this.vvHandler();
+  }
   onClose() {
+    if (this.vv && this.vvHandler) {
+      this.vv.removeEventListener("resize", this.vvHandler);
+      this.vv.removeEventListener("scroll", this.vvHandler);
+    }
+    this.vv = null;
+    this.vvHandler = null;
+    this.modalEl.style.removeProperty("bottom");
     this.contentEl.empty();
   }
 };
@@ -71,7 +101,7 @@ function settingsSection(containerEl, title) {
 }
 
 // ../../packages/ui/dist/css.generated.js
-var UI_CSS = "/* Workstream F (\xA77) \u2014 token layer. All color derives from Obsidian theme vars;\n * no hardcoded palette. Scoped to .mrd-scope so a plugin opts in by adding that\n * class to its root; nothing leaks into the rest of the app. */\n\n.mrd-scope {\n  /* color \u2014 semantic aliases over Obsidian vars */\n  --mrd-bg: var(--background-primary);\n  --mrd-bg-alt: var(--background-secondary);\n  --mrd-text: var(--text-normal);\n  --mrd-muted: var(--text-muted);\n  --mrd-faint: var(--text-faint);\n  --mrd-accent: var(--interactive-accent);\n  --mrd-accent-text: var(--text-on-accent);\n  --mrd-border: var(--background-modifier-border);\n  --mrd-hover: var(--background-modifier-hover);\n  --mrd-error: var(--text-error);\n  /* the accent skin repoints these two; default leaves them theme-neutral */\n  --mrd-rule: var(--mrd-border);\n  --mrd-label-color: var(--mrd-muted);\n\n  /* spacing \u2014 4px grid */\n  --mrd-space-1: 4px;\n  --mrd-space-2: 8px;\n  --mrd-space-3: 12px;\n  --mrd-space-4: 16px;\n  --mrd-space-5: 24px;\n  --mrd-space-6: 32px;\n\n  /* radius / hairline */\n  --mrd-radius-sm: 3px;\n  --mrd-radius-md: 5px;\n  --mrd-radius-lg: 8px;\n  --mrd-rule-width: 1px;\n\n  /* rows / density \u2014 comfortable by default; 44pt floor on mobile */\n  --mrd-row-comfortable: 40px;\n  --mrd-row-compact: 30px;\n  --mrd-touch-min: 44px;\n  --mrd-row-height: var(--mrd-row-comfortable);\n\n  /* type scale */\n  --mrd-fs-xs: 11px;\n  --mrd-fs-sm: 12px;\n  --mrd-fs-base: 14px;\n  --mrd-fs-lg: 16px;\n  --mrd-fs-xl: 20px;\n  --mrd-lh-tight: 1.2;\n  --mrd-lh-base: 1.5;\n\n  /* the utility register (mono), reused everywhere labels appear */\n  --mrd-label: var(--font-monospace);\n  --mrd-tracking: 0.08em;\n}\n\n/* density toggle (desktop) */\n.mrd-scope.mrd-density-compact {\n  --mrd-row-height: var(--mrd-row-compact);\n}\n\n/* mobile: never let a row/target fall below 44pt, whatever the density */\n.is-mobile .mrd-scope {\n  --mrd-row-height: max(var(--mrd-row-comfortable), var(--mrd-touch-min));\n}\n.is-mobile .mrd-scope.mrd-density-compact {\n  --mrd-row-height: max(var(--mrd-row-compact), var(--mrd-touch-min));\n}\n\n/* optional accent skin \u2014 OFF by default; a plugin adds .mrd-skin-accent to opt in */\n.mrd-scope.mrd-skin-accent {\n  --mrd-rule: color-mix(in srgb, var(--mrd-accent) 35%, var(--mrd-border));\n  --mrd-label-color: color-mix(in srgb, var(--mrd-accent) 55%, var(--mrd-muted));\n}\n\n/* Workstream F (\xA77) \u2014 component + scope styles. Everything is scoped to\n * .mrd-scope and uses the tokens; a plugin adopts the language by adding\n * .mrd-scope to its view/modal root. No hardcoded colors. */\n\n/* ---- the utility register --------------------------------------------- */\n.mrd-scope .mrd-label,\n.mrd-scope .mrd-status-label {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-label-color);\n  line-height: var(--mrd-lh-tight);\n}\n\n/* Section headers also join the register (gate decision): mono, uppercase,\n * tracked. Covers our own headings and Obsidian setting-tab headings within\n * scope. */\n.mrd-scope h2,\n.mrd-scope h3,\n.mrd-scope .mrd-settings-heading,\n.mrd-scope .setting-item-heading .setting-item-name {\n  font-family: var(--mrd-label);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-text);\n}\n.mrd-scope h2 { font-size: var(--mrd-fs-lg); }\n.mrd-scope h3,\n.mrd-scope .mrd-settings-heading,\n.mrd-scope .setting-item-heading .setting-item-name { font-size: var(--mrd-fs-sm); }\n\n/* ---- status strip (signature element) --------------------------------- */\n.mrd-scope .mrd-status-strip {\n  display: flex;\n  gap: var(--mrd-space-4);\n  align-items: center;\n  min-height: var(--mrd-row-compact);\n  padding: var(--mrd-space-1) var(--mrd-space-3);\n  border-bottom: var(--mrd-rule-width) solid var(--mrd-rule);\n  overflow-x: auto;\n  white-space: nowrap;\n  scrollbar-width: none;\n}\n.mrd-scope .mrd-status-strip::-webkit-scrollbar { display: none; }\n.mrd-scope .mrd-status-cell {\n  display: inline-flex;\n  gap: var(--mrd-space-1);\n  align-items: baseline;\n}\n.mrd-scope .mrd-status-value {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-sm);\n  color: var(--mrd-text);\n}\n\n/* ---- list row --------------------------------------------------------- */\n.mrd-scope .mrd-row {\n  display: flex;\n  align-items: center;\n  gap: var(--mrd-space-3);\n  min-height: var(--mrd-row-height);\n  padding: 0 var(--mrd-space-3);\n  border-bottom: var(--mrd-rule-width) solid var(--mrd-border);\n  position: relative;\n}\n.mrd-scope .mrd-row-main { flex: 1; min-width: 0; }\n.mrd-scope .mrd-row-title {\n  font-size: var(--mrd-fs-lg);\n  color: var(--mrd-text);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.mrd-scope .mrd-row-meta {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-muted);\n}\n.mrd-scope .mrd-row-badge {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-muted);\n  border: var(--mrd-rule-width) solid var(--mrd-border);\n  border-radius: var(--mrd-radius-sm);\n  padding: 0 var(--mrd-space-1);\n}\n/* desktop hover only \u2014 no hover-only *affordances*, this is decoration */\n@media (hover: hover) {\n  .mrd-scope .mrd-row:hover { background: var(--mrd-hover); }\n}\n/* swipe-to-action: trailing action revealed by swipe on touch; always tappable */\n.mrd-scope .mrd-row-action {\n  flex: 0 0 auto;\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-accent);\n  background: transparent;\n  border: none;\n  min-height: var(--mrd-touch-min);\n  padding: 0 var(--mrd-space-3);\n  cursor: pointer;\n}\n\n/* ---- empty state ------------------------------------------------------ */\n.mrd-scope .mrd-empty {\n  display: grid;\n  place-items: center;\n  min-height: calc(var(--mrd-row-height) * 3);\n  padding: var(--mrd-space-5);\n}\n.mrd-scope .mrd-empty-text {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-sm);\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-muted);\n  text-align: center;\n}\n\n/* ---- inputs ----------------------------------------------------------- */\n.mrd-scope .mrd-field { display: flex; flex-direction: column; gap: var(--mrd-space-1); margin-bottom: var(--mrd-space-3); }\n.mrd-scope .mrd-field-label {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-label-color);\n}\n.mrd-scope .mrd-field-date,\n.mrd-scope .mrd-field-quantity {\n  min-height: var(--mrd-touch-min);\n  border-radius: var(--mrd-radius-sm);\n  border: var(--mrd-rule-width) solid var(--mrd-border);\n  background: var(--mrd-bg);\n  color: var(--mrd-text);\n  padding: 0 var(--mrd-space-2);\n}\n\n/* ---- bottom sheet (mobile) / modal (desktop) -------------------------- */\n.mrd-sheet.mrd-sheet-body { padding: var(--mrd-space-4); }\n.is-mobile .mrd-sheet.mrd-sheet-mobile {\n  position: fixed;\n  left: 0; right: 0; bottom: 0;\n  top: auto;\n  width: 100%;\n  max-width: 100%;\n  margin: 0;\n  border-radius: var(--mrd-radius-lg) var(--mrd-radius-lg) 0 0;\n  animation: mrd-sheet-up 180ms ease-out;\n}\n/* safe area on anything bottom-anchored */\n.is-mobile .mrd-sheet.mrd-safe-bottom {\n  padding-bottom: max(var(--mrd-space-4), env(safe-area-inset-bottom));\n}\n@keyframes mrd-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }\n\n/* ---- focus ring (survives theme changes; visible light + dark) -------- */\n.mrd-scope :focus-visible {\n  outline: 2px solid var(--mrd-accent);\n  outline-offset: 2px;\n  border-radius: var(--mrd-radius-sm);\n}\n\n/* ---- quality floor ---------------------------------------------------- */\n@media (prefers-reduced-motion: reduce) {\n  .is-mobile .mrd-sheet.mrd-sheet-mobile { animation: none; }\n  .mrd-scope * { transition: none !important; }\n}\n";
+var UI_CSS = "/* Workstream F (\xA77) \u2014 token layer. All color derives from Obsidian theme vars;\n * no hardcoded palette. Scoped to .mrd-scope so a plugin opts in by adding that\n * class to its root; nothing leaks into the rest of the app. */\n\n.mrd-scope {\n  /* color \u2014 semantic aliases over Obsidian vars */\n  --mrd-bg: var(--background-primary);\n  --mrd-bg-alt: var(--background-secondary);\n  --mrd-text: var(--text-normal);\n  --mrd-muted: var(--text-muted);\n  --mrd-faint: var(--text-faint);\n  --mrd-accent: var(--interactive-accent);\n  --mrd-accent-text: var(--text-on-accent);\n  --mrd-border: var(--background-modifier-border);\n  --mrd-hover: var(--background-modifier-hover);\n  --mrd-error: var(--text-error);\n  /* the accent skin repoints these two; default leaves them theme-neutral */\n  --mrd-rule: var(--mrd-border);\n  --mrd-label-color: var(--mrd-muted);\n\n  /* spacing \u2014 4px grid */\n  --mrd-space-1: 4px;\n  --mrd-space-2: 8px;\n  --mrd-space-3: 12px;\n  --mrd-space-4: 16px;\n  --mrd-space-5: 24px;\n  --mrd-space-6: 32px;\n\n  /* radius / hairline */\n  --mrd-radius-sm: 3px;\n  --mrd-radius-md: 5px;\n  --mrd-radius-lg: 8px;\n  --mrd-rule-width: 1px;\n\n  /* rows / density \u2014 comfortable by default; 44pt floor on mobile */\n  --mrd-row-comfortable: 40px;\n  --mrd-row-compact: 30px;\n  --mrd-touch-min: 44px;\n  --mrd-row-height: var(--mrd-row-comfortable);\n\n  /* type scale */\n  --mrd-fs-xs: 11px;\n  --mrd-fs-sm: 12px;\n  --mrd-fs-base: 14px;\n  --mrd-fs-lg: 16px;\n  --mrd-fs-xl: 20px;\n  --mrd-lh-tight: 1.2;\n  --mrd-lh-base: 1.5;\n\n  /* the utility register (mono), reused everywhere labels appear */\n  --mrd-label: var(--font-monospace);\n  --mrd-tracking: 0.08em;\n}\n\n/* density toggle (desktop) */\n.mrd-scope.mrd-density-compact {\n  --mrd-row-height: var(--mrd-row-compact);\n}\n\n/* mobile: never let a row/target fall below 44pt, whatever the density */\n.is-mobile .mrd-scope {\n  --mrd-row-height: max(var(--mrd-row-comfortable), var(--mrd-touch-min));\n}\n.is-mobile .mrd-scope.mrd-density-compact {\n  --mrd-row-height: max(var(--mrd-row-compact), var(--mrd-touch-min));\n}\n\n/* optional accent skin \u2014 OFF by default; a plugin adds .mrd-skin-accent to opt in */\n.mrd-scope.mrd-skin-accent {\n  --mrd-rule: color-mix(in srgb, var(--mrd-accent) 35%, var(--mrd-border));\n  --mrd-label-color: color-mix(in srgb, var(--mrd-accent) 55%, var(--mrd-muted));\n}\n\n/* Workstream F (\xA77) \u2014 component + scope styles. Everything is scoped to\n * .mrd-scope and uses the tokens; a plugin adopts the language by adding\n * .mrd-scope to its view/modal root. No hardcoded colors. */\n\n/* ---- the utility register --------------------------------------------- */\n.mrd-scope .mrd-label,\n.mrd-scope .mrd-status-label {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-label-color);\n  line-height: var(--mrd-lh-tight);\n}\n\n/* Section headers also join the register (gate decision): mono, uppercase,\n * tracked. Covers our own headings and Obsidian setting-tab headings within\n * scope. */\n.mrd-scope h2,\n.mrd-scope h3,\n.mrd-scope .mrd-settings-heading,\n.mrd-scope .setting-item-heading .setting-item-name {\n  font-family: var(--mrd-label);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-text);\n}\n.mrd-scope h2 { font-size: var(--mrd-fs-lg); }\n.mrd-scope h3,\n.mrd-scope .mrd-settings-heading,\n.mrd-scope .setting-item-heading .setting-item-name { font-size: var(--mrd-fs-sm); }\n\n/* ---- status strip (signature element) --------------------------------- */\n.mrd-scope .mrd-status-strip {\n  display: flex;\n  gap: var(--mrd-space-4);\n  align-items: center;\n  min-height: var(--mrd-row-compact);\n  padding: var(--mrd-space-1) var(--mrd-space-3);\n  border-bottom: var(--mrd-rule-width) solid var(--mrd-rule);\n  overflow-x: auto;\n  white-space: nowrap;\n  scrollbar-width: none;\n}\n.mrd-scope .mrd-status-strip::-webkit-scrollbar { display: none; }\n.mrd-scope .mrd-status-cell {\n  display: inline-flex;\n  gap: var(--mrd-space-1);\n  align-items: baseline;\n}\n.mrd-scope .mrd-status-value {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-sm);\n  color: var(--mrd-text);\n}\n\n/* ---- list row --------------------------------------------------------- */\n.mrd-scope .mrd-row {\n  display: flex;\n  align-items: center;\n  gap: var(--mrd-space-3);\n  min-height: var(--mrd-row-height);\n  padding: 0 var(--mrd-space-3);\n  border-bottom: var(--mrd-rule-width) solid var(--mrd-border);\n  position: relative;\n}\n.mrd-scope .mrd-row-main { flex: 1; min-width: 0; }\n.mrd-scope .mrd-row-title {\n  font-size: var(--mrd-fs-lg);\n  color: var(--mrd-text);\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.mrd-scope .mrd-row-meta {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-muted);\n}\n.mrd-scope .mrd-row-badge {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-muted);\n  border: var(--mrd-rule-width) solid var(--mrd-border);\n  border-radius: var(--mrd-radius-sm);\n  padding: 0 var(--mrd-space-1);\n}\n/* desktop hover only \u2014 no hover-only *affordances*, this is decoration */\n@media (hover: hover) {\n  .mrd-scope .mrd-row:hover { background: var(--mrd-hover); }\n}\n/* swipe-to-action: trailing action revealed by swipe on touch; always tappable */\n.mrd-scope .mrd-row-action {\n  flex: 0 0 auto;\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-accent);\n  background: transparent;\n  border: none;\n  min-height: var(--mrd-touch-min);\n  padding: 0 var(--mrd-space-3);\n  cursor: pointer;\n}\n\n/* ---- empty state ------------------------------------------------------ */\n.mrd-scope .mrd-empty {\n  display: grid;\n  place-items: center;\n  min-height: calc(var(--mrd-row-height) * 3);\n  padding: var(--mrd-space-5);\n}\n.mrd-scope .mrd-empty-text {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-sm);\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-muted);\n  text-align: center;\n}\n\n/* ---- inputs ----------------------------------------------------------- */\n.mrd-scope .mrd-field { display: flex; flex-direction: column; gap: var(--mrd-space-1); margin-bottom: var(--mrd-space-3); }\n.mrd-scope .mrd-field-label {\n  font-family: var(--mrd-label);\n  font-size: var(--mrd-fs-xs);\n  text-transform: uppercase;\n  letter-spacing: var(--mrd-tracking);\n  color: var(--mrd-label-color);\n}\n.mrd-scope .mrd-field-date,\n.mrd-scope .mrd-field-quantity {\n  min-height: var(--mrd-touch-min);\n  border-radius: var(--mrd-radius-sm);\n  border: var(--mrd-rule-width) solid var(--mrd-border);\n  background: var(--mrd-bg);\n  color: var(--mrd-text);\n  padding: 0 var(--mrd-space-2);\n}\n\n/* ---- bottom sheet (mobile) / modal (desktop) -------------------------- */\n.mrd-sheet.mrd-sheet-body { padding: var(--mrd-space-4); }\n.is-mobile .mrd-sheet.mrd-sheet-mobile {\n  position: fixed;\n  left: 0; right: 0; bottom: 0;\n  top: auto;\n  width: 100%;\n  max-width: 100%;\n  margin: 0;\n  /* Never taller than the (keyboard-shrunk) viewport; body scrolls instead, so\n   * the sheet stays fully usable when the keyboard is up. */\n  max-height: 85dvh;\n  overflow-y: auto;\n  -webkit-overflow-scrolling: touch;\n  border-radius: var(--mrd-radius-lg) var(--mrd-radius-lg) 0 0;\n  animation: mrd-sheet-up 180ms ease-out;\n}\n/* safe area on anything bottom-anchored */\n.is-mobile .mrd-sheet.mrd-safe-bottom {\n  padding-bottom: max(var(--mrd-space-4), env(safe-area-inset-bottom));\n}\n@keyframes mrd-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }\n\n/* ---- focus ring (survives theme changes; visible light + dark) -------- */\n.mrd-scope :focus-visible {\n  outline: 2px solid var(--mrd-accent);\n  outline-offset: 2px;\n  border-radius: var(--mrd-radius-sm);\n}\n\n/* ---- quality floor ---------------------------------------------------- */\n@media (prefers-reduced-motion: reduce) {\n  .is-mobile .mrd-sheet.mrd-sheet-mobile { animation: none; }\n  .mrd-scope * { transition: none !important; }\n}\n";
 
 // ../../packages/ui/dist/styles.js
 function applyUiStyles(plugin) {
@@ -96,13 +126,36 @@ function scopeEl(el, opts = {}) {
 var import_obsidian3 = require("obsidian");
 var DEFAULT_SETTINGS = {
   types: [
-    { id: "note", label: "Note", noteType: "note", folder: "Inbox", template: "", tags: ["inbox"] },
-    { id: "task", label: "Task", noteType: "task", folder: "Inbox", template: "", tags: ["inbox", "task"] },
-    { id: "idea", label: "Idea", noteType: "idea", folder: "Inbox", template: "", tags: ["inbox", "idea"] }
+    { id: "note", label: "Note", noteType: "note", folder: "Inbox", template: "", tags: ["inbox"], fields: {} },
+    { id: "task", label: "Task", noteType: "task", folder: "Inbox", template: "", tags: ["inbox", "task"], fields: {} },
+    { id: "idea", label: "Idea", noteType: "idea", folder: "Inbox", template: "", tags: ["inbox", "idea"], fields: {} },
+    {
+      id: "reminder",
+      label: "Reminder",
+      noteType: "reminder",
+      folder: "Inbox",
+      template: "",
+      tags: ["inbox", "reminder"],
+      fields: { remind: "{{tomorrow}}" }
+    }
   ],
   attachmentsFolder: "Inbox/attachments",
   defaultType: "note"
 };
+function parseFields(text) {
+  const out = {};
+  for (const line of text.split("\n")) {
+    const t = line.trim();
+    if (!t || t.startsWith("#")) continue;
+    const i = t.indexOf(":");
+    if (i <= 0) continue;
+    out[t.slice(0, i).trim()] = t.slice(i + 1).trim();
+  }
+  return out;
+}
+function serializeFields(fields) {
+  return Object.entries(fields).map(([k, v]) => `${k}: ${v}`).join("\n");
+}
 var CaptureSettingTab = class extends import_obsidian3.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
@@ -118,39 +171,81 @@ var CaptureSettingTab = class extends import_obsidian3.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    const routing = settingsSection(containerEl, "Routing rules");
+    new import_obsidian3.Setting(general).setName("Default type").setDesc("Selected first in the capture sheet.").addDropdown((d) => {
+      for (const t of this.plugin.settings.types) d.addOption(t.id, t.label || t.id);
+      d.setValue(this.plugin.settings.defaultType).onChange(async (v) => {
+        this.plugin.settings.defaultType = v;
+        await this.plugin.saveSettings();
+      });
+    });
+    const routing = settingsSection(containerEl, "Types");
     routing.createEl("p", {
       cls: "setting-item-description",
-      text: "type \u2192 destination folder \u2192 template. Each is a chip in the capture sheet."
+      text: "Each type is a chip in the capture sheet: a name, where it files, and what it writes. Auto-fields add frontmatter \u2014 values accept tokens like {{today}}, {{tomorrow}}, {{+3d}}, {{time}}."
     });
     this.plugin.settings.types.forEach((rule, i) => {
-      const s = new import_obsidian3.Setting(routing).setName(rule.label || rule.id);
-      s.addText((t) => t.setPlaceholder("folder").setValue(rule.folder).onChange(async (v) => {
-        rule.folder = v.trim();
-        await this.plugin.saveSettings();
-      }));
-      s.addText((t) => t.setPlaceholder("template (optional)").setValue(rule.template).onChange(async (v) => {
-        rule.template = v.trim();
-        await this.plugin.saveSettings();
-      }));
-      s.addExtraButton(
-        (b) => b.setIcon("trash").setTooltip("Remove").onClick(async () => {
+      const box = routing.createDiv({ cls: "capture-type-editor" });
+      const head = new import_obsidian3.Setting(box).setName(rule.label || rule.id).setHeading();
+      head.addExtraButton(
+        (b) => b.setIcon("trash").setTooltip("Remove type").onClick(async () => {
           this.plugin.settings.types.splice(i, 1);
           await this.plugin.saveSettings();
           this.display();
         })
       );
+      new import_obsidian3.Setting(box).setName("Name").setDesc("Chip label.").addText(
+        (t) => t.setValue(rule.label).onChange(async (v) => {
+          rule.label = v;
+          await this.plugin.saveSettings();
+          head.setName(v || rule.id);
+        })
+      );
+      new import_obsidian3.Setting(box).setName("Note type").setDesc("Written to the `type` frontmatter field.").addText(
+        (t) => t.setValue(rule.noteType).onChange(async (v) => {
+          rule.noteType = v.trim() || "note";
+          await this.plugin.saveSettings();
+        })
+      );
+      new import_obsidian3.Setting(box).setName("Folder").addText(
+        (t) => t.setValue(rule.folder).onChange(async (v) => {
+          rule.folder = v.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+      new import_obsidian3.Setting(box).setName("Template").setDesc("Optional note path; its body seeds the capture.").addText(
+        (t) => t.setValue(rule.template).onChange(async (v) => {
+          rule.template = v.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+      new import_obsidian3.Setting(box).setName("Tags").setDesc("Comma-separated.").addText(
+        (t) => t.setValue(rule.tags.join(", ")).onChange(async (v) => {
+          rule.tags = v.split(",").map((s) => s.trim()).filter(Boolean);
+          await this.plugin.saveSettings();
+        })
+      );
+      new import_obsidian3.Setting(box).setName("Auto-fields").setDesc("One `key: value` per line. Tokens: {{today}} {{tomorrow}} {{yesterday}} {{+Nd}} {{-Nd}} {{time}} {{datetime}}.").addTextArea((t) => {
+        t.setValue(serializeFields(rule.fields)).onChange(async (v) => {
+          rule.fields = parseFields(v);
+          await this.plugin.saveSettings();
+        });
+        t.inputEl.rows = 3;
+        t.inputEl.addClass("capture-fields-input");
+      });
     });
     new import_obsidian3.Setting(routing).addButton(
-      (b) => b.setButtonText("Add rule").onClick(async () => {
-        const n = this.plugin.settings.types.length + 1;
+      (b) => b.setButtonText("Add type").setCta().onClick(async () => {
+        let n = this.plugin.settings.types.length + 1;
+        const ids = new Set(this.plugin.settings.types.map((t) => t.id));
+        while (ids.has(`type-${n}`)) n++;
         this.plugin.settings.types.push({
           id: `type-${n}`,
-          label: `Type ${n}`,
+          label: "New type",
           noteType: "note",
           folder: "Inbox",
           template: "",
-          tags: ["inbox"]
+          tags: ["inbox"],
+          fields: {}
         });
         await this.plugin.saveSettings();
         this.display();
@@ -160,6 +255,7 @@ var CaptureSettingTab = class extends import_obsidian3.PluginSettingTab {
 };
 
 // src/modal.ts
+var import_obsidian4 = require("obsidian");
 var CaptureModal = class extends BottomSheetModal {
   constructor(app, types, defaultTypeId, onSubmit, prefill = {}) {
     var _a, _b, _c;
@@ -197,7 +293,7 @@ var CaptureModal = class extends BottomSheetModal {
     ta.value = this.text;
     ta.placeholder = "What are you capturing?";
     ta.addEventListener("input", () => this.text = ta.value);
-    window.setTimeout(() => ta.focus(), 0);
+    if (!import_obsidian4.Platform.isMobile) window.setTimeout(() => ta.focus(), 0);
     const attach = root.createDiv({ cls: "capture-attach" });
     const status = root.createDiv({ cls: "capture-attach-status" });
     const mkInput = (accept, capture) => {
@@ -226,7 +322,20 @@ var CaptureModal = class extends BottomSheetModal {
 };
 
 // src/main.ts
-var CapturePlugin = class extends import_obsidian4.Plugin {
+function substituteTokens(value, now) {
+  return value.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (match, raw) => {
+    const t = raw.trim().toLowerCase();
+    if (t === "today") return now.format("YYYY-MM-DD");
+    if (t === "tomorrow") return now.clone().add(1, "day").format("YYYY-MM-DD");
+    if (t === "yesterday") return now.clone().subtract(1, "day").format("YYYY-MM-DD");
+    if (t === "time") return now.format("HH:mm");
+    if (t === "datetime") return now.format("YYYY-MM-DD HH:mm");
+    const rel = t.match(/^([+-])(\d+)d$/);
+    if (rel) return now.clone().add((rel[1] === "-" ? -1 : 1) * Number(rel[2]), "day").format("YYYY-MM-DD");
+    return match;
+  });
+}
+var CapturePlugin = class extends import_obsidian5.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -254,14 +363,15 @@ var CapturePlugin = class extends import_obsidian4.Plugin {
     ).open();
   }
   async ensureFolder(path) {
-    const p = (0, import_obsidian4.normalizePath)(path);
+    const p = (0, import_obsidian5.normalizePath)(path);
     if (p && !this.app.vault.getAbstractFileByPath(p)) {
       await this.app.vault.createFolder(p).catch(() => {
       });
     }
   }
   async createInboxNote(r) {
-    const now = (0, import_obsidian4.moment)();
+    var _a;
+    const now = (0, import_obsidian5.moment)();
     const date = now.format("YYYY-MM-DD");
     const stamp = now.format("YYYY-MM-DD HHmm");
     const sanitize = (s) => s.replace(/[\\/:*?"<>|#^[\]]/g, "-").trim();
@@ -271,7 +381,7 @@ var CapturePlugin = class extends import_obsidian4.Plugin {
       await this.ensureFolder(this.settings.attachmentsFolder);
       const ext = (r.file.name.split(".").pop() || "bin").toLowerCase();
       const attName = sanitize(`${stamp} ${r.type.id}`) + "." + ext;
-      const attPath = (0, import_obsidian4.normalizePath)(`${this.settings.attachmentsFolder}/${attName}`);
+      const attPath = (0, import_obsidian5.normalizePath)(`${this.settings.attachmentsFolder}/${attName}`);
       await this.app.vault.createBinary(attPath, await r.file.arrayBuffer());
       embed = `
 ![[${attName}]]
@@ -279,9 +389,12 @@ var CapturePlugin = class extends import_obsidian4.Plugin {
     }
     let templateBody = "";
     if (r.type.template) {
-      const tf = this.app.vault.getAbstractFileByPath((0, import_obsidian4.normalizePath)(r.type.template.replace(/(\.md)?$/, ".md")));
-      if (tf instanceof import_obsidian4.TFile) templateBody = (await this.app.vault.cachedRead(tf)).trim() + "\n\n";
+      const tf = this.app.vault.getAbstractFileByPath((0, import_obsidian5.normalizePath)(r.type.template.replace(/(\.md)?$/, ".md")));
+      if (tf instanceof import_obsidian5.TFile) templateBody = (await this.app.vault.cachedRead(tf)).trim() + "\n\n";
     }
+    const autoFields = Object.entries((_a = r.type.fields) != null ? _a : {}).map(
+      ([k, v]) => `${k}: ${substituteTokens(v, now)}`
+    );
     const fm = [
       "---",
       `type: ${r.type.noteType}`,
@@ -291,18 +404,19 @@ var CapturePlugin = class extends import_obsidian4.Plugin {
       `tags: [${r.type.tags.join(", ")}]`,
       `source: capture`,
       `transcript: ""`,
+      ...autoFields,
       "---",
       ""
     ].join("\n");
     const firstLine = r.text.trim().split("\n")[0].slice(0, 60);
     const base = sanitize(firstLine) || stamp;
-    let path = (0, import_obsidian4.normalizePath)(`${r.type.folder}/${base}.md`);
+    let path = (0, import_obsidian5.normalizePath)(`${r.type.folder}/${base}.md`);
     let n = 2;
     while (this.app.vault.getAbstractFileByPath(path)) {
-      path = (0, import_obsidian4.normalizePath)(`${r.type.folder}/${base} ${n++}.md`);
+      path = (0, import_obsidian5.normalizePath)(`${r.type.folder}/${base} ${n++}.md`);
     }
     const content = fm + templateBody + r.text.trim() + "\n" + embed;
     await this.app.vault.create(path, content);
-    new import_obsidian4.Notice(`Captured to ${r.type.folder}. Filed and awaiting processing.`);
+    new import_obsidian5.Notice(`Captured to ${r.type.folder}. Filed and awaiting processing.`);
   }
 };
